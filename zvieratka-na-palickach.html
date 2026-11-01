@@ -69,6 +69,17 @@ footer{flex:0 0 auto;display:flex;justify-content:center;padding:8px 0 12px}
   .seg button{padding:5px 11px;font-size:13px}
   .iconbtn{width:38px;height:38px}
 }
+
+.stick.good{animation:goodflash .7s ease}
+@keyframes goodflash{
+  0%,60%{box-shadow:0 0 0 5px #34c759,0 2px 5px rgba(25,39,81,.18)}
+  100%{box-shadow:0 2px 5px rgba(25,39,81,.18),inset 0 0 0 2px rgba(255,255,255,.28)}
+}
+.stick.good{border-color:#1d9e45}
+#checkBtn{position:absolute;right:18px;bottom:14px;z-index:30}
+#winBad{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:40;background:rgba(244,248,252,.35)}
+#winBad[hidden]{display:none}
+#winBad svg{width:min(32vmin,250px);height:auto;filter:drop-shadow(0 10px 20px rgba(120,20,20,.3));animation:pop .4s ease}
 </style>
 </head>
 <body>
@@ -114,8 +125,17 @@ footer{flex:0 0 auto;display:flex;justify-content:center;padding:8px 0 12px}
   </div>
 </header>
 <main id="game">
+  <button type="button" class="btn" id="checkBtn" hidden>Kontrola</button>
   <section id="tray" aria-label="Zásoba paličiek"></section>
   <section id="board" aria-label="Skladacia plocha"></section>
+  <div id="winBad" hidden>
+    <svg viewBox="0 0 120 120" role="img" aria-label="Skús to znova">
+      <circle cx="60" cy="60" r="52" fill="#ff6b5e" stroke="#7a1f1a" stroke-width="5"/>
+      <path d="M40 44 L50 54 M50 44 L40 54" stroke="#7a1f1a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M70 44 L80 54 M80 44 L70 54" stroke="#7a1f1a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M40 84 Q60 66 80 84" fill="none" stroke="#7a1f1a" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+  </div>
   <div id="win" hidden>
     <svg viewBox="0 0 120 120" role="img" aria-label="Výborne!">
       <circle cx="60" cy="60" r="52" fill="#ffd93d" stroke="#192751" stroke-width="5"/>
@@ -230,47 +250,69 @@ function rabbit(c){return `
 <rect x="45.5" y="57" width="9" height="7" rx="2" fill="#fff" stroke="${INK}" stroke-width="2"/>
 <path d="M50 57 L50 64" stroke="${INK}" stroke-width="1.6"/>`;}
 const PAINT = {owl, cat, dog, fox, bear, rabbit};
-const LEVELS = [
-  { n:4, flips:[false,false,true,true], animals:[
-    {t:'cat',  c0:0,c1:1, y0:18,  y1:200, bg:'#fde8d8', p:{main:'#f4a259', belly:'#fcd9b8', inner:'#f7c1d9'}},
-    {t:'dog',  c0:0,c1:1, y0:212, y1:392, bg:'#e3f0e4', p:{main:'#8d99ae', ear:'#6c7a8f', muzzle:'#efe7d3'}},
-    {t:'fox',  c0:2,c1:3, y0:18,  y1:200, bg:'#fde3e3', p:{main:'#e76f51', cream:'#fff3e4'}},
-    {t:'bear', c0:2,c1:3, y0:212, y1:392, bg:'#efe6da', p:{main:'#9c6b4f', muzzle:'#e8c9a8'}}
-  ]},
-  { n:6, flips:[false,false,false,true,true,true], animals:[
-    {t:'owl',    c0:0,c1:1, y0:22,  y1:212, bg:'#e3edfb', p:{body:'#5b8dd9', belly:'#dce9fa', wing:'#3f6fb5'}},
-    {t:'cat',    c0:1,c1:2, y0:206, y1:388, bg:'#fde8f3', p:{main:'#b565a7', belly:'#efd7ea', inner:'#f2a7c3'}},
-    {t:'rabbit', c0:3,c1:4, y0:22,  y1:212, bg:'#e8f6ee', p:{main:'#9aa5b1', inner:'#f4b8c8'}},
-    {t:'fox',    c0:4,c1:5, y0:206, y1:388, bg:'#fde8d8', p:{main:'#ef8354', cream:'#fff3e4'}}
-  ]},
-  { n:8, flips:[false,false,true,true,false,false,false,true], animals:[
-    {t:'owl',    c0:0,c1:1, y0:16,  y1:198, bg:'#efe6fb', p:{body:'#8e6fc0', belly:'#e9def7', wing:'#6f53a3'}},
-    {t:'bear',   c0:0,c1:1, y0:210, y1:392, bg:'#efe6da', p:{main:'#a9744f', muzzle:'#ecd3b3'}},
-    {t:'fox',    c0:2,c1:3, y0:16,  y1:198, bg:'#fde3e3', p:{main:'#e63946', cream:'#fff1e6'}},
-    {t:'cat',    c0:2,c1:3, y0:210, y1:392, bg:'#e3f0e4', p:{main:'#57a773', belly:'#d8eedd', inner:'#f7c1d9'}},
-    {t:'rabbit', c0:4,c1:6, y0:20,  y1:224, bg:'#e8f6ee', p:{main:'#8d99ae', inner:'#f4b8c8'}},
-    {t:'dog',    c0:5,c1:6, y0:236, y1:390, bg:'#e3edfb', p:{main:'#e0a458', ear:'#c98a3d', muzzle:'#f7ead7'}},
-    {t:'owl',    c0:7,c1:7, y0:26,  y1:376, bg:'#fdf3d8', p:{body:'#f2b134', belly:'#fdeab8', wing:'#d99a26'}}
-  ]}
-];
+const PAL = {
+  owl:   [{body:'#5b8dd9',belly:'#dce9fa',wing:'#3f6fb5'},{body:'#8e6fc0',belly:'#e9def7',wing:'#6f53a3'},{body:'#f2b134',belly:'#fdeab8',wing:'#d99a26'},{body:'#57a773',belly:'#d8eedd',wing:'#3f8a5a'}],
+  cat:   [{main:'#f4a259',belly:'#fcd9b8',inner:'#f7c1d9'},{main:'#b565a7',belly:'#efd7ea',inner:'#f2a7c3'},{main:'#57a773',belly:'#d8eedd',inner:'#f7c1d9'},{main:'#e76f51',belly:'#ffe8d6',inner:'#f4a259'}],
+  dog:   [{main:'#8d99ae',ear:'#6c7a8f',muzzle:'#efe7d3'},{main:'#e0a458',ear:'#c98a3d',muzzle:'#f7ead7'},{main:'#9c6b4f',ear:'#7d5138',muzzle:'#e8c9a8'}],
+  fox:   [{main:'#e76f51',cream:'#fff3e4'},{main:'#e63946',cream:'#fff1e6'},{main:'#ef8354',cream:'#fff3e4'}],
+  bear:  [{main:'#9c6b4f',muzzle:'#e8c9a8'},{main:'#a9744f',muzzle:'#ecd3b3'},{main:'#7d5a3c',muzzle:'#d9b48c'}],
+  rabbit:[{main:'#9aa5b1',inner:'#f4b8c8'},{main:'#b5a8c9',inner:'#f7c1d9'},{main:'#8d99ae',inner:'#ffd3e0'}]
+};
+const BGS = ['#fde8d8','#e3f0e4','#fde3e3','#efe6da','#e3edfb','#fde8f3','#e8f6ee','#efe6fb','#fdf3d8'];
+function rnd(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function generateLevel(diff){
+  const n = 8;
+  let spans;
+  if(diff===0) spans = [2,2,2,2];
+  else if(diff===1) spans = Math.random()<0.5 ? [2,2,2,2] : rnd([[3,3,2],[3,2,3],[2,3,3]]);
+  else spans = rnd([[3,3,2],[3,2,3],[2,3,3]]);
+  shuffle(spans);
+  const groupFlips = spans.map(()=> Math.random()<0.45);
+  if(groupFlips.length>1 && (groupFlips.every(Boolean) || groupFlips.every(f=>!f))){
+    groupFlips[Math.floor(Math.random()*groupFlips.length)] = !groupFlips[0];
+  }
+  const animals = [];
+  const flips = new Array(n).fill(false);
+  let col = 0, gi = 0;
+  for(const s of spans){
+    const F = groupFlips[gi++];
+    for(let i=0;i<s;i++) flips[col+i] = F;
+    const count = Math.random()<0.55 ? 2 : 1;
+    const used = [];
+    for(let k=0;k<count;k++){
+      const h = 140 + Math.random()*70;
+      let y0 = 12, tries = 0;
+      do { y0 = 12 + Math.random()*(376-h); tries++; }
+      while(tries<50 && used.some(u => y0 < u.y1+10 && y0+h+10 > u.y0));
+      used.push({y0, y1: y0+h});
+      const t = rnd(Object.keys(PAL));
+      animals.push({t, c0: col, c1: col+s-1, y0, y1: y0+h, flip: F, bg: rnd(BGS), p: rnd(PAL[t])});
+    }
+    col += s;
+  }
+  return { n, flips, animals };
+}
 const game = document.getElementById('game');
 const trayEl = document.getElementById('tray');
 const boardEl = document.getElementById('board');
 const artDefs = document.getElementById('artDefs');
 const winEl = document.getElementById('win');
+const winBadEl = document.getElementById('winBad');
+const checkBtn = document.getElementById('checkBtn');
 const helpModal = document.getElementById('helpModal');
-let level = LEVELS[0], levelIndex = 0;
+let level = null, levelIndex = 0;
 let sticks = [], boardArr = [], geom = null, drag = null;
 function buildArt(lv){
   let s = '';
   for(const a of lv.animals){
     const x = a.c0*100, w = (a.c1-a.c0+1)*100, h = a.y1-a.y0;
     s += `<rect x="${x+4}" y="${a.y0+4}" width="${w-8}" height="${h-8}" rx="22" fill="${a.bg}"/>`;
-    s += `<svg x="${x+7}" y="${a.y0+7}" width="${w-14}" height="${h-14}" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">${PAINT[a.t](a.p)}</svg>`;
+    const inner = `<svg x="${x+7}" y="${a.y0+7}" width="${w-14}" height="${h-14}" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">${PAINT[a.t](a.p)}</svg>`;
+    s += a.flip ? `<g transform="rotate(180 ${x+w/2} ${a.y0+h/2})">${inner}</g>` : inner;
   }
   return s;
 }
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buildLevel(){
   artDefs.innerHTML = '<defs><g id="art">'+buildArt(level)+'</g></defs>';
   game.querySelectorAll('.stick').forEach(e=>e.remove());
@@ -280,8 +322,10 @@ function buildLevel(){
     const el = document.createElement('div');
     el.className = 'stick'; el.dataset.id = i;
     el.setAttribute('role','img');
-    el.innerHTML = `<div class="art"><svg viewBox="${i*100} 0 100 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#art"></use></svg></div>`;
+    const base = level.flips[i] ? `<g transform="rotate(180 ${i*100+50} 200)"><use href="#art"></use></g>` : `<use href="#art"></use>`;
+    el.innerHTML = `<div class="art"><svg viewBox="${i*100} 0 100 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${base}</svg></div>`;
     el.addEventListener('contextmenu', e=>e.preventDefault());
+    el.addEventListener('animationend', ()=>el.classList.remove('good'));
     attachPointer(el, i);
     game.appendChild(el);
     sticks.push({id:i, el, zone:'tray', slot:-1, cell:i, flip:false});
@@ -293,10 +337,10 @@ function buildLevel(){
 function slotXY(i){ return {x: geom.slotX0 + i*(geom.stickW+geom.gap), y: geom.slotY0}; }
 function cellXY(c){
   const col = c % geom.cols, row = Math.floor(c / geom.cols);
-  const usedW = geom.cols*(geom.stickW+12)-12, usedH = geom.rows*(geom.stickH+12)-12;
+  const usedW = geom.cols*(geom.stickW+10)-10, usedH = geom.rows*(geom.stickH+10)-10;
   return {
-    x: geom.T.x + 10 + Math.max(0,(geom.T.w-20-usedW)/2) + col*(geom.stickW+12),
-    y: geom.T.y + 8 + Math.max(0,(geom.T.h-16-usedH)/2) + row*(geom.stickH+12)
+    x: geom.T.x + 9 + Math.max(0,(geom.T.w-18-usedW)/2) + col*(geom.stickW+10),
+    y: geom.T.y + 7 + Math.max(0,(geom.T.h-14-usedH)/2) + row*(geom.stickH+10)
   };
 }
 function stickPos(st){ return st.zone==='board' ? slotXY(st.slot) : cellXY(st.cell); }
@@ -312,19 +356,19 @@ function layout(){
   const tr = trayEl.getBoundingClientRect(), br = boardEl.getBoundingClientRect();
   const T = {x:tr.left-gr.left, y:tr.top-gr.top, w:tr.width, h:tr.height};
   const B = {x:br.left-gr.left, y:br.top-gr.top, w:br.width, h:br.height};
-  let stickH = Math.min(T.h, B.h)*0.92, gap = 3;
-  for(let guard=0; guard<80; guard++){
-    const stickW = stickH/4;
+  let stickH = Math.min(T.h, B.h)*0.94, gap = 3;
+  for(let guard=0; guard<90; guard++){
+    const stickW = stickH/5.2;
     const needW = level.n*stickW + (level.n-1)*gap;
     if(needW <= B.w-14){
-      const cols = Math.max(1, Math.floor((T.w-18)/(stickW+12)));
+      const cols = Math.max(1, Math.floor((T.w-18)/(stickW+10)));
       const rows = Math.ceil(level.n/cols);
-      if(rows*(stickH+12) <= T.h-14) break;
+      if(rows*(stickH+10) <= T.h-14) break;
     }
     stickH *= 0.94;
   }
-  const stickW = stickH/4;
-  const cols = Math.max(1, Math.floor((T.w-18)/(stickW+12)));
+  const stickW = stickH/5.2;
+  const cols = Math.max(1, Math.floor((T.w-18)/(stickW+10)));
   const rows = Math.ceil(level.n/cols);
   const totalW = level.n*stickW + (level.n-1)*gap;
   geom = {T, B, stickW, stickH, gap, cols, rows,
@@ -374,7 +418,8 @@ function attachPointer(el, id){
     if(!d.moved){
       d.st.flip = !d.st.flip;
       d.st.el.classList.toggle('flipped', d.st.flip);
-      checkWin();
+      flashGood(d.st);
+      updateCheckBtn();
       return;
     }
     handleDrop(d.st, d.x, d.y);
@@ -401,11 +446,7 @@ function handleDrop(st, x, y){
     const inside = cx>B.x && cx<B.x+B.w && cy>B.y && cy<B.y+B.h;
     if(bd < Math.max(geom.stickW*1.5, 90) || inside) placeInSlot(st, best);
     else posStick(st);
-    refreshSlots(); checkWin();
-    return;
-  }
-  const inTray = cx>T.x && cx<T.x+T.w && cy>T.y && cy<T.y+T.h;
-  if(inTray){
+  } else if(cx>T.x && cx<T.x+T.w && cy>T.y && cy<T.y+T.h){
     const cell = nearestFreeCell(cx, cy, st);
     if(cell !== null){
       if(st.zone==='board'){ boardArr[st.slot] = null; }
@@ -415,7 +456,7 @@ function handleDrop(st, x, y){
   } else {
     posStick(st);
   }
-  refreshSlots(); checkWin();
+  refreshSlots(); flashGood(st); updateCheckBtn();
 }
 function nearestFreeCell(cx, cy, st){
   let best = null, bd = Infinity;
@@ -430,6 +471,16 @@ function nearestFreeCell(cx, cy, st){
     if(d<bd){ bd=d; best=c; }
   }
   return best;
+}
+function firstFreeCell(except){
+  for(let c=0; c<geom.cols*geom.rows; c++){
+    let used = false;
+    for(const o of sticks){
+      if(o!==except && o.zone==='tray' && o.cell===c){ used = true; break; }
+    }
+    if(!used) return c;
+  }
+  return 0;
 }
 function placeInSlot(st, slot){
   const occ = boardArr[slot];
@@ -453,6 +504,16 @@ function placeInSlot(st, slot){
 function refreshSlots(){
   boardEl.querySelectorAll('.slot').forEach((s,i)=>s.classList.toggle('filled', !!boardArr[i]));
 }
+function stickGood(st){
+  return st.zone==='board' && st.slot===st.id && st.flip===level.flips[st.id];
+}
+function flashGood(st){
+  if(!stickGood(st)) return;
+  st.el.classList.remove('good');
+  void st.el.offsetWidth;
+  st.el.classList.add('good');
+}
+function boardFull(){ return boardArr.every(Boolean); }
 function isSolved(){
   for(let i=0;i<level.n;i++){
     const st = boardArr[i];
@@ -460,35 +521,51 @@ function isSolved(){
   }
   return true;
 }
-function checkWin(){ winEl.hidden = !isSolved(); }
+function updateCheckBtn(){ checkBtn.hidden = !boardFull(); }
+function onCheck(){
+  if(!boardFull()) return;
+  if(isSolved()){
+    winEl.hidden = false;
+    updateCheckBtn();
+    return;
+  }
+  winBadEl.hidden = false;
+  setTimeout(()=>{ winBadEl.hidden = true; }, 1500);
+  for(let i=0;i<level.n;i++){
+    const st = boardArr[i];
+    if(!st) continue;
+    if(!(st.id===i && st.flip===level.flips[i])){
+      boardArr[i] = null;
+      st.zone = 'tray'; st.slot = -1; st.cell = firstFreeCell(st);
+      posStick(st);
+    }
+  }
+  refreshSlots(); updateCheckBtn();
+}
 function newGame(){
-  winEl.hidden = true;
+  winEl.hidden = true; winBadEl.hidden = true;
+  level = generateLevel(levelIndex);
+  buildLevel();
   const order = shuffle([...Array(level.n).keys()]);
   sticks.forEach((st,i)=>{
     st.zone = 'tray'; st.slot = -1; st.cell = order[i];
-    st.flip = Math.random() < 0.45;
+    st.flip = Math.random() < 0.5;
     st.el.classList.toggle('flipped', st.flip);
-    posStick(st, false);
   });
   boardArr = new Array(level.n).fill(null);
-  refreshSlots();
-  if(isSolved()){
-    const st = sticks[Math.floor(Math.random()*level.n)];
-    st.flip = !st.flip;
-    st.el.classList.toggle('flipped', st.flip);
-  }
+  layout();
+  refreshSlots(); updateCheckBtn();
 }
 function setLevel(i){
-  levelIndex = i; level = LEVELS[i];
+  levelIndex = i;
   document.querySelectorAll('#difficulty button').forEach(b=>b.classList.toggle('active', +b.dataset.l===i));
-  buildLevel();
-  layout();
   newGame();
 }
+checkBtn.addEventListener('click', onCheck);
 document.querySelectorAll('#difficulty button').forEach(b=>{
   b.addEventListener('click', ()=>setLevel(+b.dataset.l));
 });
-document.getElementById('newGame').addEventListener('click', ()=>{ layout(); newGame(); });
+document.getElementById('newGame').addEventListener('click', ()=>{ newGame(); });
 document.getElementById('helpBtn').addEventListener('click', ()=>{ helpModal.hidden = false; document.getElementById('helpClose').focus(); });
 document.getElementById('helpClose').addEventListener('click', ()=>{ helpModal.hidden = true; });
 helpModal.addEventListener('click', e=>{ if(e.target===helpModal) helpModal.hidden = true; });
